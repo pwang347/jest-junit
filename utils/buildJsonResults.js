@@ -158,7 +158,15 @@ module.exports = function (report, appDirectory, options) {
     // Iterate through test cases
     suite.testResults.forEach((tc) => {
       const classname = tc.ancestorTitles.join(suiteOptions.ancestorSeparator);
-      const testTitle = tc.title;
+      let testTitle = tc.title;
+      let testOwner;
+      const regexp = /\[(P\d)\/(.+)\] (.+)/gm;
+      const matches = regexp.exec(testTitle);
+      if (matches && matches.length === 4) {
+        const [, priority, owner, title] = matches;
+        testTitle = `[${priority}] ${title}`;
+        testOwner = owner;
+      }
 
       // Build replacement map
       let testVariables = {};
@@ -169,13 +177,19 @@ module.exports = function (report, appDirectory, options) {
       testVariables[constants.TITLE_VAR] = testTitle;
       testVariables[constants.DISPLAY_NAME_VAR] = displayName;
 
+      const attributes = {
+        classname: replaceVars(suiteOptions.classNameTemplate, testVariables),
+        name: replaceVars(suiteOptions.titleTemplate, testVariables),
+        time: tc.duration / 1000
+      };
+
+      if (testOwner) {
+        attributes.owner = testOwner;
+      }
+
       let testCase = {
         'testcase': [{
-          _attr: {
-            classname: replaceVars(suiteOptions.classNameTemplate, testVariables),
-            name: replaceVars(suiteOptions.titleTemplate, testVariables),
-            time: tc.duration / 1000
-          }
+          _attr: attributes
         }]
       };
 
